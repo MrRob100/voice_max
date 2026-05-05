@@ -5,7 +5,7 @@ import httpx
 from fastapi import FastAPI, Request
 
 from effects import apply_reverb
-from effects import apply_music_bed  # beat-aligned music bed
+from effects import apply_music_bed  # beat-aligned music bed (switch ACTIVE_MODE to use)
 
 app = FastAPI()
 
@@ -37,8 +37,8 @@ async def process_voice_note(request: Request):
     os.close(output_fd)
 
     try:
-        # apply_reverb(input_path, output_path)
-        apply_music_bed(input_path, output_path)
+        apply_reverb(input_path, output_path)
+        # apply_music_bed(input_path, output_path)
         print(f"[processor] reverb applied → {output_path}")
     except Exception as e:
         os.unlink(output_path)
