@@ -359,13 +359,15 @@ func handleMessage(client *whatsmeow.Client, store *MessageStore, msg *events.Me
 				msg.Info.Chat.String(), client.Store.ID, text)
 		}
 		if strings.HasPrefix(text, "!vm") {
-			isSelf := client.Store.ID != nil && (msg.Info.Chat.User == client.Store.ID.User ||
-				msg.Info.Chat.String() == client.Store.ID.ToNonAD().String())
+			isSelf := client.Store.ID != nil && (
+				msg.Info.Chat.User == client.Store.ID.User ||
+				msg.Info.Chat.String() == client.Store.ID.ToNonAD().String() ||
+				(client.Store.LID != nil && msg.Info.Chat.User == client.Store.LID.User))
 			if isSelf {
 				go handleVMCommand(client, msg.Info.Chat, text)
 			} else {
-				fmt.Printf("[bridge] !vm ignored — chat %s is not self (%v)\n",
-					msg.Info.Chat.String(), client.Store.ID)
+				fmt.Printf("[bridge] !vm ignored — chat %s is not self (%v lid=%v)\n",
+					msg.Info.Chat.String(), client.Store.ID, client.Store.LID)
 			}
 		}
 	}
