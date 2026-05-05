@@ -362,7 +362,7 @@ func handleMessage(client *whatsmeow.Client, store *MessageStore, msg *events.Me
 			isSelf := client.Store.ID != nil && (
 				msg.Info.Chat.User == client.Store.ID.User ||
 				msg.Info.Chat.String() == client.Store.ID.ToNonAD().String() ||
-				(client.Store.LID != nil && msg.Info.Chat.User == client.Store.LID.User))
+				(client.Store.LID.User != "" && msg.Info.Chat.User == client.Store.LID.User))
 			if isSelf {
 				go handleVMCommand(client, msg.Info.Chat, text)
 			} else {
