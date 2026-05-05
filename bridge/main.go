@@ -348,15 +348,24 @@ func handleMessage(client *whatsmeow.Client, store *MessageStore, msg *events.Me
 		}
 
 		// !vm commands sent to self
-		if client.Store.ID != nil && msg.Info.Chat.User == client.Store.ID.User {
-			text := msg.Message.GetConversation()
-			if text == "" {
-				if ext := msg.Message.GetExtendedTextMessage(); ext != nil {
-					text = ext.GetText()
-				}
+		text := msg.Message.GetConversation()
+		if text == "" {
+			if ext := msg.Message.GetExtendedTextMessage(); ext != nil {
+				text = ext.GetText()
 			}
-			if strings.HasPrefix(text, "!vm") {
+		}
+		if text != "" {
+			fmt.Printf("[bridge] outgoing text — chat=%s myID=%v text=%q\n",
+				msg.Info.Chat.String(), client.Store.ID, text)
+		}
+		if strings.HasPrefix(text, "!vm") {
+			isSelf := client.Store.ID != nil && (msg.Info.Chat.User == client.Store.ID.User ||
+				msg.Info.Chat.String() == client.Store.ID.ToNonAD().String())
+			if isSelf {
 				go handleVMCommand(client, msg.Info.Chat, text)
+			} else {
+				fmt.Printf("[bridge] !vm ignored — chat %s is not self (%v)\n",
+					msg.Info.Chat.String(), client.Store.ID)
 			}
 		}
 	}
