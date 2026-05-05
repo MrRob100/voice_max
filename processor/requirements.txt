@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+httpx
+pedalboard
+librosa
+soundfile

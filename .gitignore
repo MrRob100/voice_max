@@ -1,0 +1,20 @@
+# WhatsApp session and downloaded media — contains auth credentials
+bridge/store/
+
+# Python
+processor/.venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Go build output
+bridge/voice-max-bridge
+bridge/*.exe
+
+# Music files (copyrighted — transfer to server manually via scp)
+music/
+
+# Temp audio files
+*.wav
+/tmp/*.ogg
