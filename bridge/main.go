@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -240,6 +241,92 @@ func sendAudio(client *whatsmeow.Client, recipientJID types.JID, audioPath strin
 	return err
 }
 
+func sendText(client *whatsmeow.Client, jid types.JID, text string) {
+	msg := &waProto.Message{Conversation: proto.String(text)}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := client.SendMessage(ctx, jid, msg); err != nil {
+		fmt.Printf("[bridge] sendText failed: %v\n", err)
+	}
+}
+
+func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
+	parts := strings.Fields(strings.TrimSpace(text))
+	if len(parts) < 2 {
+		sendText(client, selfJID, "usage: !vm reverb | beat <name> | snap <0-1> | gain <0-1> | status")
+		return
+	}
+
+	var update map[string]interface{}
+	var reply string
+
+	switch parts[1] {
+	case "reverb":
+		update = map[string]interface{}{"mode": "reverb"}
+		reply = "mode: reverb ✓"
+
+	case "beat":
+		if len(parts) < 3 {
+			sendText(client, selfJID, "usage: !vm beat <the_ghetto|gin_juice>")
+			return
+		}
+		update = map[string]interface{}{"mode": "beat", "beat": parts[2]}
+		reply = fmt.Sprintf("mode: beat — %s ✓", parts[2])
+
+	case "snap":
+		if len(parts) < 3 {
+			sendText(client, selfJID, "usage: !vm snap <0.0-1.0>")
+			return
+		}
+		val, err := strconv.ParseFloat(parts[2], 64)
+		if err != nil || val < 0 || val > 1 {
+			sendText(client, selfJID, "snap must be between 0.0 and 1.0")
+			return
+		}
+		update = map[string]interface{}{"snap_strength": val}
+		reply = fmt.Sprintf("snap: %.2f ✓", val)
+
+	case "gain":
+		if len(parts) < 3 {
+			sendText(client, selfJID, "usage: !vm gain <0.0-1.0>")
+			return
+		}
+		val, err := strconv.ParseFloat(parts[2], 64)
+		if err != nil || val < 0 || val > 1 {
+			sendText(client, selfJID, "gain must be between 0.0 and 1.0")
+			return
+		}
+		update = map[string]interface{}{"gain": val}
+		reply = fmt.Sprintf("gain: %.2f ✓", val)
+
+	case "status":
+		resp, err := http.Get(processorURL + "/config")
+		if err != nil {
+			sendText(client, selfJID, fmt.Sprintf("error reaching processor: %v", err))
+			return
+		}
+		defer resp.Body.Close()
+		var cfg map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&cfg)
+		sendText(client, selfJID, fmt.Sprintf("mode=%v beat=%v snap=%v gain=%v",
+			cfg["mode"], cfg["beat"], cfg["snap_strength"], cfg["gain"]))
+		return
+
+	default:
+		sendText(client, selfJID, "unknown command — try: reverb | beat <name> | snap <val> | gain <val> | status")
+		return
+	}
+
+	data, _ := json.Marshal(update)
+	resp, err := http.Post(processorURL+"/config", "application/json", bytes.NewReader(data))
+	if err != nil {
+		sendText(client, selfJID, fmt.Sprintf("error reaching processor: %v", err))
+		return
+	}
+	resp.Body.Close()
+	sendText(client, selfJID, reply)
+}
+
 func handleMessage(client *whatsmeow.Client, store *MessageStore, msg *events.Message) {
 	chatJID := msg.Info.Chat.String()
 	store.StoreChat(chatJID, msg.Info.Timestamp)
@@ -258,6 +345,19 @@ func handleMessage(client *whatsmeow.Client, store *MessageStore, msg *events.Me
 		if aud := msg.Message.GetAudioMessage(); aud != nil && aud.GetPTT() {
 			fmt.Printf("[bridge] outgoing voice note %s → dispatching to processor\n", msg.Info.ID)
 			go dispatchToProcessor(msg.Info.ID, chatJID)
+		}
+
+		// !vm commands sent to self
+		if client.Store.ID != nil && msg.Info.Chat.User == client.Store.ID.User {
+			text := msg.Message.GetConversation()
+			if text == "" {
+				if ext := msg.Message.GetExtendedTextMessage(); ext != nil {
+					text = ext.GetText()
+				}
+			}
+			if strings.HasPrefix(text, "!vm") {
+				go handleVMCommand(client, msg.Info.Chat, text)
+			}
 		}
 	}
 }

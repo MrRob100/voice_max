@@ -2,14 +2,36 @@ import os
 import tempfile
 
 import httpx
+import effects
 from fastapi import FastAPI, Request
 
-from effects import apply_reverb
-from effects import apply_music_bed  # beat-aligned music bed (switch ACTIVE_MODE to use)
+from effects import apply_reverb, apply_music_bed
 
 app = FastAPI()
 
 BRIDGE_URL = os.getenv("BRIDGE_URL", "http://localhost:8080")
+
+config = {
+    "mode": "reverb",        # "reverb" or "beat"
+    "beat": "the_ghetto",
+    "snap_strength": 0.80,
+    "gain": 0.2,
+}
+
+
+@app.get("/config")
+async def get_config():
+    return config
+
+
+@app.post("/config")
+async def set_config(request: Request):
+    payload = await request.json()
+    for key in ("mode", "beat", "snap_strength", "gain"):
+        if key in payload:
+            config[key] = payload[key]
+    print(f"[processor] config updated: {config}")
+    return {"success": True, "config": config}
 
 
 @app.post("/process")
@@ -36,13 +58,20 @@ async def process_voice_note(request: Request):
     output_fd, output_path = tempfile.mkstemp(suffix=".ogg")
     os.close(output_fd)
 
+    mode = config["mode"]
     try:
-        apply_reverb(input_path, output_path)
-        # apply_music_bed(input_path, output_path)
-        print(f"[processor] reverb applied → {output_path}")
+        if mode == "beat":
+            effects.SNAP_STRENGTH = config["snap_strength"]
+            apply_music_bed(input_path, output_path,
+                            beat_name=config["beat"],
+                            instrumental_gain=config["gain"])
+            print(f"[processor] beat mode applied ({config['beat']}) → {output_path}")
+        else:
+            apply_reverb(input_path, output_path)
+            print(f"[processor] reverb applied → {output_path}")
     except Exception as e:
         os.unlink(output_path)
-        print(f"[processor] reverb failed: {e}")
+        print(f"[processor] processing failed: {e}")
         return {"success": False, "error": str(e)}
 
     try:
