@@ -19,6 +19,11 @@ config = {
 }
 
 
+@app.get("/beats")
+async def list_beats():
+    return {"beats": list(effects.BEATS.keys())}
+
+
 @app.get("/config")
 async def get_config():
     return config

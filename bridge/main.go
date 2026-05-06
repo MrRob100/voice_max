@@ -267,7 +267,17 @@ func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
 
 	case "beat":
 		if len(parts) < 3 {
-			sendText(client, selfJID, "usage: !vm beat <the_ghetto|gin_juice>")
+			resp, err := http.Get(processorURL + "/beats")
+			if err != nil {
+				sendText(client, selfJID, fmt.Sprintf("error reaching processor: %v", err))
+				return
+			}
+			defer resp.Body.Close()
+			var result struct {
+				Beats []string `json:"beats"`
+			}
+			json.NewDecoder(resp.Body).Decode(&result)
+			sendText(client, selfJID, "available beats: "+strings.Join(result.Beats, ", "))
 			return
 		}
 		update = map[string]interface{}{"mode": "beat", "beat": parts[2]}
