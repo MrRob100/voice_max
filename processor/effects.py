@@ -22,6 +22,18 @@ BEATS = {
         "file": "gin_juice.aif",
         "start_offset": 0.0,
     },
+    "mobb_deep": {
+        "file": "mobb_deep_31s.mp3",
+        "start_offset": 31.0,
+    },
+    "pools": {
+        "file": "pools_25s.mp3",
+        "start_offset": 25.0,
+    },
+    "where_my_mind": {
+        "file": "where_my_mind_25s.mp3",
+        "start_offset": 25.0,
+    },
 }
 
 ACTIVE_BEAT = "the_ghetto"
