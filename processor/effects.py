@@ -39,10 +39,10 @@ BEATS = {
 ACTIVE_BEAT = "the_ghetto"
 
 # Global stretch tolerance — beyond this, skip bar-snapping to avoid warping short notes
-MAX_GLOBAL_STRETCH = 0.30
-# Per-segment stretch limits — ±33% max keeps speech intelligible, prevents bunching
-MIN_SEGMENT_RATE = 0.75
-MAX_SEGMENT_RATE = 1.4
+MAX_GLOBAL_STRETCH = 0.45
+# Per-segment stretch limits — loosened to pass more anchors and do more alignment work
+MIN_SEGMENT_RATE = 0.60
+MAX_SEGMENT_RATE = 1.7
 # How far to pull each onset toward its beat target (0=no effect, 1=hard snap)
 # 0.65 gives groove feel without mangling speech around it
 SNAP_STRENGTH = 0.90
