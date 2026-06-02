@@ -33,6 +33,7 @@ import (
 
 var processorURL string
 var storeDir string
+var vmEnabled = true
 
 // MessageStore holds media metadata needed for download and replay.
 type MessageStore struct {
@@ -253,7 +254,7 @@ func sendText(client *whatsmeow.Client, jid types.JID, text string) {
 func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
 	parts := strings.Fields(strings.TrimSpace(text))
 	if len(parts) < 2 {
-		sendText(client, selfJID, "usage: !vm reverb | beat <name> | snap <0-1> | gain <0-1> | status")
+		sendText(client, selfJID, "usage: !vm on | off | reverb | beat <name> | snap <0-1> | gain <0-1> | status")
 		return
 	}
 
@@ -261,6 +262,16 @@ func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
 	var reply string
 
 	switch parts[1] {
+	case "on":
+		vmEnabled = true
+		sendText(client, selfJID, "vm: on ✓")
+		return
+
+	case "off":
+		vmEnabled = false
+		sendText(client, selfJID, "vm: off ✓")
+		return
+
 	case "reverb":
 		update = map[string]interface{}{"mode": "reverb"}
 		reply = "mode: reverb ✓"
@@ -318,12 +329,16 @@ func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
 		defer resp.Body.Close()
 		var cfg map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&cfg)
-		sendText(client, selfJID, fmt.Sprintf("mode=%v beat=%v snap=%v gain=%v",
-			cfg["mode"], cfg["beat"], cfg["snap_strength"], cfg["gain"]))
+		state := "on"
+		if !vmEnabled {
+			state = "off"
+		}
+		sendText(client, selfJID, fmt.Sprintf("vm=%s mode=%v beat=%v snap=%v gain=%v",
+			state, cfg["mode"], cfg["beat"], cfg["snap_strength"], cfg["gain"]))
 		return
 
 	default:
-		sendText(client, selfJID, "unknown command — try: reverb | beat <name> | snap <val> | gain <val> | status")
+		sendText(client, selfJID, "unknown command — try: on | off | reverb | beat <name> | snap <val> | gain <val> | status")
 		return
 	}
 
@@ -353,8 +368,12 @@ func handleMessage(client *whatsmeow.Client, store *MessageStore, msg *events.Me
 
 	if msg.Info.IsFromMe {
 		if aud := msg.Message.GetAudioMessage(); aud != nil && aud.GetPTT() {
-			fmt.Printf("[bridge] outgoing voice note %s → dispatching to processor\n", msg.Info.ID)
-			go dispatchToProcessor(msg.Info.ID, chatJID)
+			if vmEnabled {
+				fmt.Printf("[bridge] outgoing voice note %s → dispatching to processor\n", msg.Info.ID)
+				go dispatchToProcessor(msg.Info.ID, chatJID)
+			} else {
+				fmt.Printf("[bridge] outgoing voice note %s → skipped (vm disabled)\n", msg.Info.ID)
+			}
 		}
 
 		// !vm commands sent to self
