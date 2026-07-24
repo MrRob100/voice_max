@@ -80,27 +80,28 @@ def apply_reverb(input_ogg: str, output_ogg: str, room_size: float = 0.75, wet_l
 def apply_phaser(
     input_ogg: str,
     output_ogg: str,
-    rate_hz: float = 0.8,
-    depth: float = 0.7,
-    feedback: float = 0.35,
-    mix: float = 0.55,
+    rate_hz: float = 1.6,
+    depth: float = 1.0,
+    feedback: float = 0.75,
+    mix: float = 1.0,
 ) -> None:
     """
-    Sweeping phaser plus a touch of chorus for a lush, modulated voice.
+    Heavy sweeping phaser plus a thick chorus for an obviously modulated,
+    swirling voice.
 
     rate_hz:  LFO sweep speed — how fast the phaser swooshes.
-    depth:    how much of the frequency range the sweep covers.
-    feedback: resonance of the notches — higher = more metallic/vocal.
-    mix:      wet/dry blend of the phaser (0=dry, 1=full effect).
+    depth:    how much of the frequency range the sweep covers (1.0 = full).
+    feedback: resonance of the notches — higher = more metallic/ringing.
+    mix:      wet/dry blend of the phaser (1.0 = fully wet, strongest effect).
     """
     wav_in = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
     wav_out = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
     try:
         subprocess.run(["ffmpeg", "-y", "-i", input_ogg, wav_in], check=True, capture_output=True)
         board = Pedalboard([
-            Phaser(rate_hz=rate_hz, depth=depth, centre_frequency_hz=1300.0,
+            Phaser(rate_hz=rate_hz, depth=depth, centre_frequency_hz=1000.0,
                    feedback=feedback, mix=mix),
-            Chorus(rate_hz=1.2, depth=0.25, centre_delay_ms=7.0, feedback=0.0, mix=0.3),
+            Chorus(rate_hz=1.5, depth=0.6, centre_delay_ms=8.0, feedback=0.25, mix=0.5),
         ])
         with AudioFile(wav_in) as f:
             audio = f.read(f.frames)
