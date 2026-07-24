@@ -4,3 +4,4 @@ httpx
 pedalboard
 librosa
 soundfile
+rvc-python

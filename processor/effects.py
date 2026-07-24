@@ -5,7 +5,7 @@ import tempfile
 import librosa
 import numpy as np
 import soundfile as sf
-from pedalboard import Pedalboard, Reverb
+from pedalboard import Pedalboard, Reverb, Phaser, Chorus
 from pedalboard.io import AudioFile
 
 from audio import convert_to_opus_ogg
@@ -59,6 +59,49 @@ def apply_reverb(input_ogg: str, output_ogg: str, room_size: float = 0.75, wet_l
         subprocess.run(["ffmpeg", "-y", "-i", input_ogg, wav_in], check=True, capture_output=True)
         board = Pedalboard([Reverb(room_size=room_size, damping=0.3, wet_level=wet_level,
                                    dry_level=1.0 - wet_level, freeze_mode=0.0)])
+        with AudioFile(wav_in) as f:
+            audio = f.read(f.frames)
+            sr = f.samplerate
+            num_channels = f.num_channels
+        effected = board(audio, sr)
+        with AudioFile(wav_out, "w", samplerate=sr, num_channels=num_channels) as f:
+            f.write(effected)
+        convert_to_opus_ogg(wav_out, output_ogg)
+    finally:
+        for p in [wav_in, wav_out]:
+            if os.path.exists(p):
+                os.unlink(p)
+
+
+# ---------------------------------------------------------------------------
+# Phaser / modulation
+# ---------------------------------------------------------------------------
+
+def apply_phaser(
+    input_ogg: str,
+    output_ogg: str,
+    rate_hz: float = 0.8,
+    depth: float = 0.7,
+    feedback: float = 0.35,
+    mix: float = 0.55,
+) -> None:
+    """
+    Sweeping phaser plus a touch of chorus for a lush, modulated voice.
+
+    rate_hz:  LFO sweep speed — how fast the phaser swooshes.
+    depth:    how much of the frequency range the sweep covers.
+    feedback: resonance of the notches — higher = more metallic/vocal.
+    mix:      wet/dry blend of the phaser (0=dry, 1=full effect).
+    """
+    wav_in = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+    wav_out = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+    try:
+        subprocess.run(["ffmpeg", "-y", "-i", input_ogg, wav_in], check=True, capture_output=True)
+        board = Pedalboard([
+            Phaser(rate_hz=rate_hz, depth=depth, centre_frequency_hz=1300.0,
+                   feedback=feedback, mix=mix),
+            Chorus(rate_hz=1.2, depth=0.25, centre_delay_ms=7.0, feedback=0.0, mix=0.3),
+        ])
         with AudioFile(wav_in) as f:
             audio = f.read(f.frames)
             sr = f.samplerate

@@ -254,7 +254,7 @@ func sendText(client *whatsmeow.Client, jid types.JID, text string) {
 func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
 	parts := strings.Fields(strings.TrimSpace(text))
 	if len(parts) < 2 {
-		sendText(client, selfJID, "usage: !vm on | off | reverb | beat <name> | snap <0-1> | gain <0-1> | status")
+		sendText(client, selfJID, "usage: !vm on | off | reverb | phaser | beat <name> | snap <0-1> | gain <0-1> | status")
 		return
 	}
 
@@ -275,6 +275,10 @@ func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
 	case "reverb":
 		update = map[string]interface{}{"mode": "reverb"}
 		reply = "mode: reverb ✓"
+
+	case "phaser":
+		update = map[string]interface{}{"mode": "phaser"}
+		reply = "mode: phaser ✓"
 
 	case "beat":
 		if len(parts) < 3 {
@@ -338,7 +342,7 @@ func handleVMCommand(client *whatsmeow.Client, selfJID types.JID, text string) {
 		return
 
 	default:
-		sendText(client, selfJID, "unknown command — try: on | off | reverb | beat <name> | snap <val> | gain <val> | status")
+		sendText(client, selfJID, "unknown command — try: on | off | reverb | phaser | beat <name> | snap <val> | gain <val> | status")
 		return
 	}
 
