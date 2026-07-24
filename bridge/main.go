@@ -197,12 +197,17 @@ func downloadMedia(client *whatsmeow.Client, store *MessageStore, messageID, cha
 	return absPath, nil
 }
 
+// extractDirectPathFromURL turns a full media URL into the direct path whatsmeow
+// needs for download. The query string MUST be preserved: modern whatsmeow ignores
+// the URL field entirely and builds the CDN request as "<host><directPath>&hash=…",
+// appending onto the path — so the auth params (?ccb=…&oh=…&oe=…) have to already be
+// part of the direct path, otherwise the CDN rejects the request with 403.
 func extractDirectPathFromURL(url string) string {
 	parts := strings.SplitN(url, ".net/", 2)
 	if len(parts) < 2 {
 		return url
 	}
-	return "/" + strings.SplitN(parts[1], "?", 2)[0]
+	return "/" + parts[1]
 }
 
 func sendAudio(client *whatsmeow.Client, recipientJID types.JID, audioPath string) error {
